@@ -1,0 +1,28 @@
+# --- Core Django + Celery ---
+Django==5.2.3
+djangorestframework==3.16.0
+django-cors-headers==4.7.0
+django_celery_results==2.6.0
+celery==5.5.3
+kombu==5.5.4
+billiard==4.2.1
+amqp==5.3.1
+redis==6.2.0
+
+
+# --- Whisper & Transcription ---
+openai-whisper==20250625
+faster-whisper==1.1.1
+ffmpeg-python==0.2.0
+pydub==0.25.1
+soundfile==0.13.1
+audioread==3.0.1
+torchaudio==2.7.1+cpu
+torch==2.7.1
+ctranslate2==4.6.0
+
+
+# --- Evaluation & Language Tools ---
+transformers==4.53.2
+sentencepiece==0.2.0
+tokenizers==0.21.2
