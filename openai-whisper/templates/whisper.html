@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <title>تبدیل صوت به متن</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      direction: rtl;
+      padding: 20px;
+    }
+    progress {
+      width: 100%;
+      height: 20px;
+    }
+    #status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 1em;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>تبدیل صوت به متن</h1>
+
+  <div id="upload-section">
+    <form id="upload-form" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">تبدیل</button>
+    </form>
+  </div>
+
+  <div id="status-section" style="display:none;">
+    <p id="status-text"></p>
+    <progress id="progress-bar" value="0" max="100" style="display:none;"></progress>
+  </div>
+
+  <div id="result-section" style="display:none;">
+    <h3>نتیجه تبدیل:</h3>
+    <pre id="transcript" style="white-space: pre-wrap; direction: rtl;"></pre>
+    <button id="download-btn">دانلود فایل متنی</button>
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    const statusSec = document.getElementById('status-section');
+    const statusText = document.getElementById('status-text');
+    const progressBar = document.getElementById('progress-bar');
+    const resultSec = document.getElementById('result-section');
+    const transcript = document.getElementById('transcript');
+    const downloadBtn = document.getElementById('download-btn');
+
+    let taskId = null;
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = new FormData(form);
+      const res = await fetch("", { method: 'POST', body: data });
+      const json = await res.json();
+      if (json.error) {
+        alert(json.error);
+        return;
+      }
+      taskId = json.task_id;
+      form.style.display = 'none';
+      statusSec.style.display = 'block';
+      statusText.innerText = 'فایل در صف قرار گرفت...';
+      poll();
+    });
+
+    async function poll() {
+      const res = await fetch(`?task_id=${taskId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const json = await res.json();
+      const state = json.state;
+
+      if (state === 'PENDING') {
+        statusText.innerText = 'در صف قرار گرفته...';
+      } else if (state === 'PROGRESS') {
+        const current = json.current || 0;
+        const total = json.total || 1;
+        const percent = Math.floor((current / total) * 100);
+        const partialText = json.partial_text || "";
+
+        statusText.innerText = `در حال پردازش: ${current} از ${total} (${percent}٪)`;
+        progressBar.style.display = 'block';
+        progressBar.value = percent;
+
+        transcript.innerText = partialText;
+        transcript.style.display = 'block';
+      } else if (state === 'SUCCESS') {
+        statusText.innerText = '✅ انجام‌شد';
+        transcript.innerText = json.transcription || '';
+        statusSec.style.display = 'none';
+        resultSec.style.display = 'block';
+      } else if (state === 'FAILURE') {
+        statusText.innerText = '❌ خطا در پردازش';
+        alert(json.error || 'یک خطا رخ داد');
+        location.reload();
+        return;
+      }
+
+      if (state === 'PENDING' || state === 'PROGRESS') {
+        setTimeout(poll, 2000);
+      }
+    }
+
+    downloadBtn.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = `data:text/plain;charset=utf-8,${encodeURIComponent(transcript.innerText)}`;
+      a.download = "transcription.txt";
+      a.click();
+    });
+  </script>
+</body>
+</html>
